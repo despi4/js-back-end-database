@@ -1,42 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login</title>
+  <link rel="stylesheet" href="style/style.css" />
 </head>
 <body>
-  <h1>Login</h1>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Assignment 3 • Auth</h1>
+          <small>Client sends requests only • server does validation/auth</small>
+        </div>
+      </div>
+      <div class="nav">
+        <a class="btn primary" href="/login.html">Login</a>
+        <a class="btn" href="/register.html">Register</a>
+        <a class="btn" href="/profile.html">Profile</a>
+      </div>
+    </div>
 
-  <input id="login" placeholder="Email or Username"><br><br>
-  <input id="password" type="password" placeholder="Password"><br><br>
+    <div class="grid">
+      <div class="card">
+        <div class="header">
+          <div>
+            <h2>Login</h2>
+            <p>Get JWT token from server. Token is saved to localStorage.</p>
+          </div>
+          <div id="status" class="badge">idle</div>
+        </div>
 
-  <button onclick="login()">Login</button>
+        <div class="body">
+          <div class="field">
+            <label>Email or Username</label>
+            <input id="login" placeholder="you@example.com or username" autocomplete="username" />
+          </div>
 
-  <pre id="result"></pre>
+          <div class="field">
+            <label>Password</label>
+            <input id="password" type="password" placeholder="••••••" autocomplete="current-password" />
+          </div>
+
+          <div class="row">
+            <button class="btn success" onclick="login()">Login</button>
+            <button class="btn danger" onclick="logout()">Logout</button>
+            <a class="btn" href="/profile.html">Go to Profile</a>
+          </div>
+
+          <hr class="sep" />
+
+          <div class="kv" style="margin-bottom:12px;">
+            <div class="key">HTTP status</div><div class="val" id="httpStatus">—</div>
+            <div class="key">Saved token</div><div class="val" id="tokenInfo">—</div>
+          </div>
+
+          <pre id="result">{}</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="header">
+          <div>
+            <h2>Token helper</h2>
+            <p>See what is stored in localStorage.</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <button class="btn" onclick="showStored()">Show stored token</button>
+            <button class="btn" onclick="copyToken()">Copy token</button>
+          </div>
+          <hr class="sep" />
+          <pre id="stored">(empty)</pre>
+          <p class="small">Client should not call external APIs directly — only your server.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
+    function setBadge(kind, text) {
+      const el = document.getElementById("status");
+      el.className = "badge " + (kind || "");
+      el.textContent = text;
+    }
+
+    function currentToken() {
+      return localStorage.getItem("token") || "";
+    }
+
+    function showStored() {
+      const t = currentToken();
+      document.getElementById("stored").textContent = t ? t : "(empty)";
+      document.getElementById("tokenInfo").textContent = t ? ("saved (" + t.length + " chars)") : "—";
+    }
+
+    async function copyToken() {
+      const t = currentToken();
+      if (!t) return alert("No token saved. Login first.");
+      await navigator.clipboard.writeText(t);
+      alert("Token copied");
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      showStored();
+      setBadge("", "logged out");
+      document.getElementById("result").textContent = JSON.stringify({ ok: true, message: "token removed" }, null, 2);
+      document.getElementById("httpStatus").textContent = "—";
+    }
+
     async function login() {
-      const loginValue = document.getElementById("login").value;
+      setBadge("warn", "loading...");
+      document.getElementById("httpStatus").textContent = "—";
+      document.getElementById("result").textContent = "{}";
+
+      const loginValue = document.getElementById("login").value.trim();
       const password = document.getElementById("password").value;
 
       const payload = loginValue.includes("@")
         ? { email: loginValue, password }
         : { username: loginValue, password };
 
-      const res = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      try {
+        const res = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
+        document.getElementById("httpStatus").textContent = String(res.status);
+        document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          setBadge("ok", "success");
+        } else {
+          setBadge("bad", "error");
+        }
+
+        showStored();
+      } catch (e) {
+        setBadge("bad", "network error");
+        document.getElementById("result").textContent = JSON.stringify({ ok: false, message: e?.message || "Network error" }, null, 2);
       }
-
-      document.getElementById("result").textContent = JSON.stringify(data, null, 2);
     }
+
+    showStored();
   </script>
 </body>
 </html>

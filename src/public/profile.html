@@ -1,34 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Profile</title>
+  <link rel="stylesheet" href="style/style.css" />
 </head>
 <body>
-  <h1>My Profile</h1>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Assignment 3 • Auth</h1>
+          <small>Protected profile • Bearer JWT</small>
+        </div>
+      </div>
+      <div class="nav">
+        <a class="btn" href="/login.html">Login</a>
+        <a class="btn" href="/register.html">Register</a>
+        <a class="btn primary" href="/profile.html">Profile</a>
+      </div>
+    </div>
 
-  <button onclick="loadProfile()">Load Profile</button>
+    <div class="grid">
+      <div class="card">
+        <div class="header">
+          <div>
+            <h2>My Profile</h2>
+            <p>GET /profile (server reads Postgres + MongoDB).</p>
+          </div>
+          <div id="status" class="badge">idle</div>
+        </div>
 
-  <pre id="result"></pre>
+        <div class="body">
+          <div class="row">
+            <button class="btn success" onclick="loadProfile()">Load Profile</button>
+            <button class="btn danger" onclick="logout()">Logout</button>
+          </div>
+
+          <hr class="sep" />
+
+          <div class="kv" style="margin-bottom:12px;">
+            <div class="key">HTTP status</div><div class="val" id="httpStatus">—</div>
+            <div class="key">Token</div><div class="val" id="tokenInfo">—</div>
+          </div>
+
+          <pre id="result">{}</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="header">
+          <div>
+            <h2>Edit profile (MongoDB)</h2>
+            <p>PUT /profile updates fullName/bio/avatarUrl.</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="field">
+            <label>Full name</label>
+            <input id="fullName" placeholder="Your name" />
+          </div>
+          <div class="field">
+            <label>Bio</label>
+            <textarea id="bio" placeholder="Short bio"></textarea>
+          </div>
+          <div class="field">
+            <label>Avatar URL</label>
+            <input id="avatarUrl" placeholder="https://..." />
+          </div>
+
+          <div class="row">
+            <button class="btn primary" onclick="saveProfile()">Save</button>
+            <button class="btn" onclick="prefill()">Prefill</button>
+          </div>
+
+          <hr class="sep" />
+          <pre id="saveResult">{}</pre>
+
+          <p class="small">
+            If your backend does not have PUT /profile yet, this will return 404/405.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    async function loadProfile() {
-      const token = localStorage.getItem("token");
+    function setBadge(kind, text) {
+      const el = document.getElementById("status");
+      el.className = "badge " + (kind || "");
+      el.textContent = text;
+    }
 
-      if (!token) {
-        alert("No token found. Please login first.");
+    function token() {
+      return localStorage.getItem("token") || "";
+    }
+
+    function updateTokenInfo() {
+      const t = token();
+      document.getElementById("tokenInfo").textContent = t ? ("present (" + t.length + " chars)") : "missing";
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      updateTokenInfo();
+      setBadge("", "logged out");
+      document.getElementById("result").textContent = JSON.stringify({ ok: true, message: "token removed" }, null, 2);
+      document.getElementById("httpStatus").textContent = "—";
+    }
+
+    function prefill() {
+      document.getElementById("fullName").value = "Almadi";
+      document.getElementById("bio").value = "Backend student • PostgreSQL + MongoDB";
+      document.getElementById("avatarUrl").value = "https://example.com/avatar.png";
+    }
+
+    async function loadProfile() {
+      const t = token();
+      updateTokenInfo();
+
+      if (!t) {
+        alert("No token found. Login first.");
         return;
       }
 
-      const res = await fetch("/profile", {
-        headers: {
-          "Authorization": "Bearer " + token
-        }
-      });
+      setBadge("warn", "loading...");
+      document.getElementById("httpStatus").textContent = "—";
+      document.getElementById("result").textContent = "{}";
 
-      const data = await res.json();
-      document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+      try {
+        const res = await fetch("/profile", {
+          headers: { "Authorization": "Bearer " + t }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        document.getElementById("httpStatus").textContent = String(res.status);
+        document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+
+        if (res.ok) {
+          setBadge("ok", "success");
+          const p = data.profile || {};
+          document.getElementById("fullName").value = p.fullName || "";
+          document.getElementById("bio").value = p.bio || "";
+          document.getElementById("avatarUrl").value = p.avatarUrl || "";
+        } else {
+          setBadge("bad", "error");
+        }
+      } catch (e) {
+        setBadge("bad", "network error");
+        document.getElementById("result").textContent = JSON.stringify({ ok: false, message: e?.message || "Network error" }, null, 2);
+      }
     }
+
+    async function saveProfile() {
+      const t = token();
+      updateTokenInfo();
+
+      if (!t) {
+        alert("No token found. Login first.");
+        return;
+      }
+
+      setBadge("warn", "saving...");
+      document.getElementById("saveResult").textContent = "{}";
+
+      const payload = {
+        fullName: document.getElementById("fullName").value,
+        bio: document.getElementById("bio").value,
+        avatarUrl: document.getElementById("avatarUrl").value,
+      };
+
+      try {
+        const res = await fetch("/profile", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + t
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        document.getElementById("saveResult").textContent = JSON.stringify({ status: res.status, data }, null, 2);
+
+        if (res.ok) setBadge("ok", "saved");
+        else setBadge("bad", "error");
+      } catch (e) {
+        setBadge("bad", "network error");
+        document.getElementById("saveResult").textContent = JSON.stringify({ ok: false, message: e?.message || "Network error" }, null, 2);
+      }
+    }
+
+    updateTokenInfo();
   </script>
 </body>
 </html>
