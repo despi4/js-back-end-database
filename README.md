@@ -1,7 +1,3 @@
-Here’s a **clean, small, and professional README** for your project. You can copy this into `README.md` and edit names if needed.
-
----
-
 # Backend Authentication & Profile API (PostgreSQL + MongoDB)
 
 This project is a backend application built with **Node.js** and **Express** that demonstrates server-side authentication, authorization, and profile management using **PostgreSQL** and **MongoDB** (mixed databases).
