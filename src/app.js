@@ -1,4 +1,5 @@
 import express from "express";
+import { authRoutes } from "./routes/auth.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 export function createApp() {
@@ -8,6 +9,8 @@ export function createApp() {
 
     app.get("/health", (req, res) => res.json({ ok: true}));
     
+    app.use(authRoutes);
+
     app.use(errorHandler);
     return app;
 }

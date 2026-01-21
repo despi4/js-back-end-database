@@ -1,11 +1,21 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { pgHealthcheck } from "./config/postgres.js";
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || 3000);
 
-const app = createApp();
+async function main() {
+  const ok = await pgHealthcheck();
+  if (!ok) throw new Error("Postgres healthcheck failed");
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  const app = createApp();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+main().catch((e) => {
+  console.error("Startup error:", e);
+  process.exit(1);
 });
