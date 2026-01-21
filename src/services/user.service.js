@@ -19,3 +19,16 @@ export async function createUser({ email, username, passwordHash }) {
   );
   return r.rows[0];
 }
+
+export async function findUserByEmailOrUsername({ email, username }) {
+  if (email) {
+    const r = await pgPool.query("SELECT * FROM users WHERE email=$1", [email]);
+    return r.rows[0] || null;
+  }
+  if (username) {
+    const r = await pgPool.query("SELECT * FROM users WHERE username=$1", [username]);
+    return r.rows[0] || null;
+  }
+  return null;
+}
+

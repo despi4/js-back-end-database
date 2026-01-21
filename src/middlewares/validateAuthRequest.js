@@ -13,6 +13,18 @@ export function validateAuthRequest(mode /* "register" | "login" */) {
         }
       }
 
+      if (mode === "login") {
+        const hasLogin = (email && typeof email === "string") || (username && typeof username === "string");
+        if (!hasLogin) {
+            return res.status(400).json({
+            ok: false,
+            error: "validation_error",
+            message: "email or username is required",
+            });
+        }
+      }
+
+
       if (!password || typeof password !== "string") {
         return res.status(400).json({ ok: false, error: "validation_error", message: "password is required" });
       }
