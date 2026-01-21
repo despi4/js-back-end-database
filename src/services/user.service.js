@@ -32,3 +32,13 @@ export async function findUserByEmailOrUsername({ email, username }) {
   return null;
 }
 
+export async function getUserPublicById(id) {
+  const r = await pgPool.query(
+    "SELECT id, email, username, created_at FROM users WHERE id=$1",
+    [id]
+  );
+  return r.rows[0] || null;
+}
+
+
+

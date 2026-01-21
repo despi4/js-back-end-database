@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import "dotenv/config";
 import { createUser, findUserByEmailOrUsername } from "../services/user.service.js";
 import { signToken } from "../services/token.service.js";
+import { ensureProfile } from "../services/profile.service.js";
 
 export async function register(req, res, next) {
   try {
@@ -12,6 +13,8 @@ export async function register(req, res, next) {
 
     const user = await createUser({ email, username, passwordHash });
 
+    await ensureProfile(user.id);
+    
     return res.status(201).json({
       ok: true,
       message: "registered",
