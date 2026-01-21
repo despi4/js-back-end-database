@@ -1,5 +1,6 @@
 import { getUserPublicById } from "../services/user.service.js";
 import { ensureProfile, getProfileByUserId } from "../services/profile.service.js";
+import { updateProfile } from "../services/profile.service.js";
 
 export async function myProfile(req, res, next) {
   try {
@@ -26,3 +27,18 @@ export async function myProfile(req, res, next) {
     next(e);
   }
 }
+
+export async function updateMyProfile(req, res, next) {
+  try {
+    const userId = req.user.userId;
+
+    const updated = await updateProfile(userId, req.body ?? {});
+    return res.status(200).json({
+      ok: true,
+      profile: updated,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
